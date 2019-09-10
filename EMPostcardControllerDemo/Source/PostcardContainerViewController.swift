@@ -27,7 +27,7 @@ internal class PostcardContainerViewController: UIViewController {
     
     var containerCornerRadius: CGFloat {
         get {
-            var cornerRadius: CGFloat = 13;
+            var cornerRadius: CGFloat = 13
             if let nav = self.navigationController, nav is PostcardNavigationController {
                 let nav = self.navigationController as! PostcardNavigationController
                 cornerRadius = nav.postcardCornerRadius
@@ -54,7 +54,7 @@ internal class PostcardContainerViewController: UIViewController {
         var postcardView = UIView()
         postcardView.layer.masksToBounds = true
         postcardView.layer.cornerRadius = containerCornerRadius
-        postcardView.backgroundColor = .white;
+        postcardView.backgroundColor = .white
         return postcardView
     }()
     
@@ -226,7 +226,7 @@ extension PostcardContainerViewController {
             if $0 is PostcardNavigationControlling {
                 let vc = $0 as! PostcardNavigationControlling
                 let nav = navigationController as! PostcardNavigationController
-                vc.didTappedOnTopBarAtPostcard(nav: nav)
+                vc.didTappedOnTopBarAtPostcard?(nav: nav)
             }
         }
     }
@@ -239,29 +239,32 @@ extension PostcardContainerViewController {
             let nav = self.navigationController as! PostcardNavigationController
             
             // styleBar
-            let style = pvc.preferredInteractiveBarStyleAtPostcard(nav: nav)
-            switch style {
-            case .white:
-                interactiveBarArrowView.image = UIImage(named: "control_interactive_down_arrow_white")
-                interactiveBarArrowView.isHidden = false
-                break
-            case .black:
-                interactiveBarArrowView.image = UIImage(named: "control_interactive_down_arrow_black")
-                interactiveBarArrowView.isHidden = false
-                break
-            case .none:
-                interactiveBarArrowView.isHidden = true
+            if let style = pvc.preferredInteractiveBarStyleAtPostcard?(nav: nav) {
+                
+                switch style {
+                case .white:
+                    interactiveBarArrowView.image = UIImage(named: "control_interactive_down_arrow_white")
+                    interactiveBarArrowView.isHidden = false
+                    break
+                case .black:
+                    interactiveBarArrowView.image = UIImage(named: "control_interactive_down_arrow_black")
+                    interactiveBarArrowView.isHidden = false
+                    break
+                default :
+                    interactiveBarArrowView.isHidden = true
+                    break
+                }
             }
             
             // scrollView
-            let scrollView = pvc.scrollViewShouldDetectAtPostcard(nav: nav)
+            let scrollView = pvc.scrollViewShouldDetectAtPostcard?(nav: nav)
             contentDetectScrollView = scrollView
             if let scrollView = scrollView {
                 scrollView.addObserver(self, forKeyPath: "contentOffset", options: .new, context: nil)
             }
         }
     }
-    
+        
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == "contentOffset" {
             

@@ -22,13 +22,13 @@ public enum PostcardTransitionMode {
 open class PostcardTransition: NSObject, UIViewControllerAnimatedTransitioning {
     
     /// 转场动画时长
-    open var duration: TimeInterval = 3
+    open var duration: TimeInterval = 0.3
     
     /// 转场动画模式
     open var mode: PostcardTransitionMode = .present
     
     /// maskView
-    private var transitionMaskView: UIView?
+    private weak var transitionMaskView: UIView!
     
     
     //MARK: >> UIViewControllerAnimatedTransitioning
@@ -83,7 +83,7 @@ extension PostcardTransition {
         maskView.snp.updateConstraints { (make) in
             make.edges.equalToSuperview()
         }
-        self.transitionMaskView = maskView
+        transitionMaskView = maskView
         
         // nav
         containerView.addSubview(nav.view)
@@ -130,7 +130,7 @@ extension PostcardTransition {
 
         }) { (finished) in
             let cancelled = context.transitionWasCancelled
-            if (shouldSnap && !cancelled) {
+            if shouldSnap && !cancelled {
                 UIView .animate(withDuration: 0.2, delay: 0, options: .curveLinear, animations: {
                     
                     postcardVC.postcardSnapView.alpha = 1
@@ -160,7 +160,7 @@ extension PostcardTransition {
         // animation: run
         UIView.animate(withDuration: transitionDuration(using: context), delay: 0, options: .curveEaseIn, animations: {
             
-            self.transitionMaskView!.alpha  = 0
+            self.transitionMaskView.alpha  = 0
             postcardVC.postcardView.transform = postcardFinalT
             postcardVC.postcardSnapView.transform = postcardFinalT
         }) { (finished) in
@@ -198,7 +198,7 @@ extension PostcardTransition {
         toPostcard.postcardView.transform = tT;
         
         // animation: run
-        UIView.animate(withDuration: transitionDuration(using: context), delay: transitionDuration(using: context) / 2, options: .curveEaseOut, animations: {
+        UIView.animate(withDuration: transitionDuration(using: context) / 2, delay: transitionDuration(using: context) / 2, options: .curveEaseOut, animations: {
             fromPostcard.postcardMaskView.alpha = 1;
             toPostcard.backgroundMaskView.alpha = 1;
         }, completion: nil)

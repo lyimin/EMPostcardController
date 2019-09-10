@@ -56,3 +56,10 @@ class PostcardTestViewController: UIViewController {
         }
     }
 }
+
+extension PostcardTestViewController: PostcardNavigationControlling {
+    
+    func didTappedOnTopBarAtPostcard(nav: PostcardNavigationController) {
+        
+    }
+}

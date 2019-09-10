@@ -14,31 +14,32 @@ import UIKit
 /// - none: 无
 /// - black: 黑色往下箭头
 /// - white: 白色往下箭头
-public enum PostcardInteractiveBarStyle {
+@objc public enum PostcardInteractiveBarStyle: Int {
+    
     case none
     case black
     case white
 }
 
-protocol PostcardNavigationControlling {
+@objc public protocol PostcardNavigationControlling {
     
     /// 点击顶部topBar
     ///
     /// - Parameter nav: 导航栏
-    func didTappedOnTopBarAtPostcard(nav: PostcardNavigationController)
+    @objc optional func didTappedOnTopBarAtPostcard(nav: PostcardNavigationController)
 
     /// 顶部箭头
     ///
     /// - Parameter nav: 导航栏
     /// - Returns: 返回顶部箭头按钮样式
-    func preferredInteractiveBarStyleAtPostcard(nav: PostcardNavigationController) -> PostcardInteractiveBarStyle;
+    @objc optional func preferredInteractiveBarStyleAtPostcard(nav: PostcardNavigationController) -> PostcardInteractiveBarStyle
 
     
     /// 注：如果该控制器有scrollView或者其子类。需要传入scrollView或其子类做手势交互
     ///
     /// - Parameter nav: 导航栏
     /// - Returns: 内容页面的scrollView或其子类
-    func scrollViewShouldDetectAtPostcard(nav: PostcardNavigationController) -> UIScrollView?
+    @objc optional func scrollViewShouldDetectAtPostcard(nav: PostcardNavigationController) -> UIScrollView?
 }
 
 open class PostcardNavigationController: UINavigationController {
@@ -53,11 +54,21 @@ open class PostcardNavigationController: UINavigationController {
     /// 卡片顶部的圆角大小
     open var postcardCornerRadius: CGFloat = 13
     
+    /// 是否支持手势交互转场
+    open var dismissInteractiveEnable: Bool = true
+    open var presentInteractiveEnable: Bool = true
+    
     
     //MARK: >> Private Properties
     //------------------------------------------------------------------------
     
+    /// 转场动画类
     private var transition: PostcardTransition!
+    
+    /// 手势
+    private var dismissTransition: UIPercentDrivenInteractiveTransition?
+    private var presentTransition: UIPercentDrivenInteractiveTransition?
+    private var popTransition: UIPercentDrivenInteractiveTransition!
     
     //MARK: >> Life Cycle
     //------------------------------------------------------------------------
@@ -134,13 +145,19 @@ extension PostcardNavigationController: UINavigationControllerDelegate, UIViewCo
         return transition
     }
     
-    // TODO:
     public func interactionControllerForPresentation(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+        
+        if transition.mode == .present {
+            return presentTransition
+        }
         return nil
     }
     
-    // TODO:
     public func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+        
+        if transition.mode == .dismiss {
+            return dismissTransition
+        }
         return nil
     }
     
@@ -160,9 +177,11 @@ extension PostcardNavigationController: UINavigationControllerDelegate, UIViewCo
         return nil
     }
     
-    // TODO:
     public func navigationController(_ navigationController: UINavigationController, interactionControllerFor animationController: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
         
+        if transition.mode == .pop {
+            return self.popTransition
+        }
         return nil
     }
 }
