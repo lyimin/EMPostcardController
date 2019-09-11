@@ -40,7 +40,65 @@ import UIKit
     /// - Parameter nav: 导航栏
     /// - Returns: 内容页面的scrollView或其子类
     @objc optional func scrollViewShouldDetectAtPostcard(nav: PostcardNavigationController) -> UIScrollView?
+    
+    
+    /// 注：如果该controller支持手势交互关闭。需要传入view做手势交互
+    ///
+    /// - Parameter nav: 导航栏
+    /// - Returns: 做手势交互的view
+    @objc optional func dismissInteractiveTransitionViewAtPostcard(nav: PostcardNavigationController) -> UIView?
 }
+
+protocol InteractiveTransitionDriver {
+    var dismissDriver: UIPercentDrivenInteractiveTransition? { get }
+}
+
+
+/// 手势交互动作
+enum InteractiveEventAction {
+    
+    case pop    (state: State, dir: Direction)
+    case dismiss(state: State, dir: Direction)
+    case present(state: State, dir: Direction)
+    
+    /// 手势完成状态
+    enum State {
+        case finished
+        case cancelled
+    }
+    
+    /// 手势最后一刻在滑动的方向
+    enum Direction {
+        case down
+        case up
+    }
+    
+    /// 动画参数
+    struct InteractiveAnimationParameter {
+        var completionSpeed: CGFloat = 0.75
+        var completionCurve: UIView.AnimationCurve = .easeInOut
+        var finished: Bool = true
+    }
+    
+    func paramter() -> InteractiveAnimationParameter {
+        switch self {
+            
+        case .dismiss(let state, let dir),
+             .pop    (let state, let dir):
+            var paramter = InteractiveAnimationParameter()
+            paramter.completionCurve = dir == .down ? .easeIn : .easeOut
+            paramter.finished = dir == .down
+            paramter.completionSpeed = state == .finished ? 0.75 : dir == .down ? 1 : 0.45
+            return paramter
+        default:
+            return InteractiveAnimationParameter()
+        }
+    }
+}
+
+typealias InteractiveState = InteractiveEventAction.State
+typealias InteractiveDirection = InteractiveEventAction.Direction
+typealias InteractiveParameter = InteractiveEventAction.InteractiveAnimationParameter
 
 open class PostcardNavigationController: UINavigationController {
     
@@ -53,6 +111,9 @@ open class PostcardNavigationController: UINavigationController {
     
     /// 卡片顶部的圆角大小
     open var postcardCornerRadius: CGFloat = 13
+    
+    /// 手势关闭卡片的临界点  [0, 1]
+    open var progsThreshold: CGFloat = 0.3
     
     /// 是否支持手势交互转场
     open var dismissInteractiveEnable: Bool = true
@@ -68,7 +129,7 @@ open class PostcardNavigationController: UINavigationController {
     /// 手势
     private var dismissTransition: UIPercentDrivenInteractiveTransition?
     private var presentTransition: UIPercentDrivenInteractiveTransition?
-    private var popTransition: UIPercentDrivenInteractiveTransition!
+    private var popTransition:     UIPercentDrivenInteractiveTransition?
     
     //MARK: >> Life Cycle
     //------------------------------------------------------------------------
@@ -180,8 +241,116 @@ extension PostcardNavigationController: UINavigationControllerDelegate, UIViewCo
     public func navigationController(_ navigationController: UINavigationController, interactionControllerFor animationController: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
         
         if transition.mode == .pop {
-            return self.popTransition
+            return popTransition
         }
         return nil
+    }
+}
+
+
+//MARK: >> Interactive Events
+//------------------------------------------------------------------------
+
+extension PostcardNavigationController {
+    
+    public func interactiveDismiss(withPanGestureRecognizer pan: UIPanGestureRecognizer) {
+        
+        switch pan.state {
+            
+        // BUG: 不执行began方法
+        case .began:
+            dismissTransition = UIPercentDrivenInteractiveTransition()
+            // >> dismiss
+            dismiss(animated: true, completion: nil)
+            break
+            
+        case .changed:
+            let point = pan.translation(in: pan.view)
+            var progs: CGFloat = point.y / pan.view!.superview!.bounds.height
+            progs = fmin(1, fmax(0, progs))
+            
+            // >> update BUG:不执行began方法
+            if let tran = dismissTransition {
+                tran.update(progs)
+            }
+            else {
+                dismissTransition = UIPercentDrivenInteractiveTransition()
+                dismiss(animated: true, completion: nil)
+            }
+            break
+            
+        case .cancelled, .ended:
+            // >> progs
+            let point = pan.translation(in: pan.view)
+            var progs: CGFloat = point.y / pan.view!.superview!.bounds.height
+            progs = fmin(1, fmax(0, progs))
+            
+            let velocityY = pan.velocity(in: view).y
+            handleInteractiveEvent(handler: dismissTransition!, progs: progs, velocityY: velocityY)
+            // >> reset
+            dismissTransition = nil
+            break
+            
+        default:
+            break
+        }
+    }
+    
+    public func interactivePop(withPanGestureRecognizer pan: UIPanGestureRecognizer) {
+        
+        switch pan.state {
+        case .began:
+            popTransition = UIPercentDrivenInteractiveTransition()
+            // >> pop
+            popViewController(animated: true)
+            print("began pop")
+            break
+            
+        case .changed:
+            let point = pan.translation(in: pan.view)
+            var progs: CGFloat = point.y / pan.view!.superview!.bounds.height
+            progs = fmin(1, fmax(0, progs))
+            // >> update
+            popTransition?.update(progs)
+            print("changed pop")
+            break
+            
+        case .cancelled, .ended:
+            // >> progs
+            let point = pan.translation(in: pan.view)
+            var progs: CGFloat = point.y / pan.view!.superview!.bounds.height
+            progs = fmin(1, fmax(0, progs))
+            
+            let velocityY = pan.velocity(in: view).y
+            handleInteractiveEvent(handler: popTransition!, progs: progs, velocityY: velocityY)
+            // >> reset
+            popTransition = nil
+            print("end pop")
+            break
+            
+        default:
+            break
+        }
+    }
+    
+    /// 处理手势事件
+    ///
+    /// - Parameters:
+    ///   - transition: 手势识别者
+    ///   - progs: 拉动的进度
+    private func handleInteractiveEvent(handler: UIPercentDrivenInteractiveTransition, progs: CGFloat, velocityY: CGFloat) {
+    
+        // 手势交互状态 如果下拉进度大于0.3 (state == finished)
+        let state: InteractiveState = progs > progsThreshold ? .finished : .cancelled
+        
+        // 手势交互手指方向
+        let dir: InteractiveDirection = velocityY > 0 ? .down : .up
+        let action = InteractiveEventAction.dismiss(state: state, dir: dir)
+        
+        // 设置参数
+        let paramter = action.paramter()
+        handler.completionCurve = paramter.completionCurve
+        handler.completionSpeed = paramter.completionSpeed
+        paramter.finished ? handler.finish() : handler.cancel()
     }
 }

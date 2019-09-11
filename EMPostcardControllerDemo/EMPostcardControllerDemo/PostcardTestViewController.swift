@@ -62,4 +62,8 @@ extension PostcardTestViewController: PostcardNavigationControlling {
     func didTappedOnTopBarAtPostcard(nav: PostcardNavigationController) {
         
     }
+    
+    func dismissInteractiveTransitionViewAtPostcard(nav: PostcardNavigationController) -> UIView? {
+        return self.view
+    }
 }

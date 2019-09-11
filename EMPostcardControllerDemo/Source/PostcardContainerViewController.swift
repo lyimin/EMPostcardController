@@ -36,10 +36,11 @@ internal class PostcardContainerViewController: UIViewController {
         }
     }
     
+    weak var postcardNavController: PostcardNavigationController?
     var contentViewController: UIViewController!
     var contentDetectScrollView: UIScrollView?
     var contentInteractiveBarStyle: NSInteger!
-
+    
     //MARK: >> Private Properties
     //------------------------------------------------------------------------
     
@@ -213,11 +214,20 @@ internal class PostcardContainerViewController: UIViewController {
 
 extension PostcardContainerViewController {
     
-    
     @objc fileprivate func onInteractivePanGesture(gesture: UIPanGestureRecognizer) {
-        let nav = self.navigationController as! PostcardNavigationController
+        
+        guard let nav = postcardNavController else {
+            print("error nav = nil")
+            return
+        }
+        
         if nav.popoverPresentationController != nil || nav.viewControllers.count > 1 {
-            nav
+            nav.interactivePop(withPanGestureRecognizer: gesture)
+            print("interactivePop count: \(nav.viewControllers.count)")
+        }
+        else {
+            nav.interactiveDismiss(withPanGestureRecognizer: gesture)
+            print("interactiveDismiss count: \(nav.viewControllers.count)")
         }
     }
     
@@ -236,7 +246,8 @@ extension PostcardContainerViewController {
         if contentViewController is PostcardNavigationControlling {
             
             let pvc = contentViewController as! PostcardNavigationControlling
-            let nav = self.navigationController as! PostcardNavigationController
+            let nav = navigationController as! PostcardNavigationController
+            postcardNavController = nav
             
             // styleBar
             if let style = pvc.preferredInteractiveBarStyleAtPostcard?(nav: nav) {
@@ -261,6 +272,14 @@ extension PostcardContainerViewController {
             contentDetectScrollView = scrollView
             if let scrollView = scrollView {
                 scrollView.addObserver(self, forKeyPath: "contentOffset", options: .new, context: nil)
+            }
+            
+            // disimiss view
+            let dismissTransitionView = pvc.dismissInteractiveTransitionViewAtPostcard?(nav: nav)
+            if let transitionView = dismissTransitionView {
+//                transitionView.isUserInteractionEnabled = true
+//                let interactivePan = UIPanGestureRecognizer(target: self, action: #selector(onInteractivePanGesture(gesture:)))
+//                transitionView.addGestureRecognizer(interactivePan)
             }
         }
     }
