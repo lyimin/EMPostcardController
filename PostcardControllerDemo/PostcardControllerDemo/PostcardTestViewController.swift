@@ -1,6 +1,6 @@
 //
 //  PostcardTestViewController.swift
-//  EMPostcardControllerDemo
+//  PostcardControllerDemo
 //
 //  Created by EamonLiang on 2019/9/9.
 //  Copyright © 2019 EamonLiang. All rights reserved.

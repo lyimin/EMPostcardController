@@ -1,6 +1,6 @@
 //
 //  DeviceUtil.swift
-//  EMPostcardControllerDemo
+//  PostcardControllerDemo
 //
 //  Created by EamonLiang on 2019/9/4.
 //  Copyright © 2019 EamonLiang. All rights reserved.
