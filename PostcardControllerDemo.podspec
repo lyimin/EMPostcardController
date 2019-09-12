@@ -3,6 +3,7 @@ Pod::Spec.new do |s|
   s.name         = "PostcardControllerDemo"
   #版本号对应github项目的tag
   s.version      = "1.0.0"
+  s.swift_version = "5.0"
   s.summary      = "卡片转场动画库"
   # description可以注释
   # s.description  = <<-DESC
