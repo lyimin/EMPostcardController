@@ -49,56 +49,6 @@ import UIKit
     @objc optional func dismissInteractiveTransitionViewAtPostcard(nav: PostcardNavigationController) -> UIView?
 }
 
-protocol InteractiveTransitionDriver {
-    var dismissDriver: UIPercentDrivenInteractiveTransition? { get }
-}
-
-
-/// 手势交互动作
-enum InteractiveEventAction {
-    
-    case pop    (state: State, dir: Direction)
-    case dismiss(state: State, dir: Direction)
-    case present(state: State, dir: Direction)
-    
-    /// 手势完成状态
-    enum State {
-        case finished
-        case cancelled
-    }
-    
-    /// 手势最后一刻在滑动的方向
-    enum Direction {
-        case down
-        case up
-    }
-    
-    /// 动画参数
-    struct InteractiveAnimationParameter {
-        var completionSpeed: CGFloat = 0.75
-        var completionCurve: UIView.AnimationCurve = .easeInOut
-        var finished: Bool = true
-    }
-    
-    func paramter() -> InteractiveAnimationParameter {
-        switch self {
-            
-        case .dismiss(let state, let dir),
-             .pop    (let state, let dir):
-            var paramter = InteractiveAnimationParameter()
-            paramter.completionCurve = dir == .down ? .easeIn : .easeOut
-            paramter.finished = dir == .down
-            paramter.completionSpeed = state == .finished ? 0.75 : dir == .down ? 1 : 0.45
-            return paramter
-        default:
-            return InteractiveAnimationParameter()
-        }
-    }
-}
-
-typealias InteractiveState = InteractiveEventAction.State
-typealias InteractiveDirection = InteractiveEventAction.Direction
-typealias InteractiveParameter = InteractiveEventAction.InteractiveAnimationParameter
 
 open class PostcardNavigationController: UINavigationController {
     
@@ -119,17 +69,67 @@ open class PostcardNavigationController: UINavigationController {
     open var dismissInteractiveEnable: Bool = true
     open var presentInteractiveEnable: Bool = true
     
+    /// 是否正在手势操作
+    private(set) var isDismissGestureActive: Bool = false
+    private(set) var isPopGestureActive: Bool = false
     
     //MARK: >> Private Properties
     //------------------------------------------------------------------------
     
     /// 转场动画类
     private var transition: PostcardTransition!
-    
+
     /// 手势
     private var dismissTransition: UIPercentDrivenInteractiveTransition?
     private var presentTransition: UIPercentDrivenInteractiveTransition?
     private var popTransition:     UIPercentDrivenInteractiveTransition?
+    
+    /// rename
+    typealias InteractiveState = InteractiveEventAction.State
+    typealias InteractiveDirection = InteractiveEventAction.Direction
+    typealias InteractiveParameter = InteractiveEventAction.InteractiveAnimationParameter
+    
+    /// 手势交互动作
+    enum InteractiveEventAction {
+        
+        case pop    (state: State, dir: Direction)
+        case dismiss(state: State, dir: Direction)
+        case present(state: State, dir: Direction)
+        
+        /// 手势完成状态
+        enum State {
+            case finished
+            case cancelled
+        }
+        
+        /// 手势最后一刻在滑动的方向
+        enum Direction {
+            case down
+            case up
+        }
+        
+        /// 动画参数
+        struct InteractiveAnimationParameter {
+            var completionSpeed: CGFloat = 0.75
+            var completionCurve: UIView.AnimationCurve = .easeInOut
+            var finished: Bool = true
+        }
+        
+        func paramter() -> InteractiveAnimationParameter {
+            switch self {
+                
+            case .dismiss(let state, let dir),
+                 .pop    (let state, let dir):
+                var paramter = InteractiveAnimationParameter()
+                paramter.completionCurve = dir == .down ? .easeIn : .easeOut
+                paramter.finished = dir == .down
+                paramter.completionSpeed = state == .finished ? 0.75 : dir == .down ? 1 : 0.45
+                return paramter
+            default:
+                return InteractiveAnimationParameter()
+            }
+        }
+    }
     
     //MARK: >> Life Cycle
     //------------------------------------------------------------------------
@@ -255,6 +255,7 @@ extension PostcardNavigationController {
     
     public func interactiveDismiss(withPanGestureRecognizer pan: UIPanGestureRecognizer) {
         
+        isDismissGestureActive = true
         switch pan.state {
             
         // BUG: 不执行began方法
@@ -289,6 +290,7 @@ extension PostcardNavigationController {
             handleInteractiveEvent(handler: dismissTransition!, progs: progs, velocityY: velocityY)
             // >> reset
             dismissTransition = nil
+            isDismissGestureActive = false
             break
             
         default:
@@ -298,6 +300,7 @@ extension PostcardNavigationController {
     
     public func interactivePop(withPanGestureRecognizer pan: UIPanGestureRecognizer) {
         
+        isPopGestureActive = true
         switch pan.state {
         case .began:
             popTransition = UIPercentDrivenInteractiveTransition()
@@ -325,6 +328,7 @@ extension PostcardNavigationController {
             handleInteractiveEvent(handler: popTransition!, progs: progs, velocityY: velocityY)
             // >> reset
             popTransition = nil
+            isPopGestureActive = false
             print("end pop")
             break
             

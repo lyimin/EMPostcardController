@@ -159,10 +159,6 @@ internal class PostcardContainerViewController: UIViewController {
             make.center.equalTo(interactiveBarView)
         }
         
-        // pan
-        let interactivePan = UIPanGestureRecognizer(target: self, action: #selector(onInteractivePanGesture(gesture:)))
-        interactiveBarView.addGestureRecognizer(interactivePan)
-        
         // content view controller
         addChild(contentViewController)
         containerView.addSubview(contentViewController.view)
@@ -220,15 +216,19 @@ extension PostcardContainerViewController {
             print("error nav = nil")
             return
         }
-        
-        if nav.popoverPresentationController != nil || nav.viewControllers.count > 1 {
+        // 手势pop时，会调用popViewController方法，nav的childVC数量会-1
+        if nav.viewControllers.count > 1 {
             nav.interactivePop(withPanGestureRecognizer: gesture)
-            print("interactivePop count: \(nav.viewControllers.count)")
         }
         else {
-            nav.interactiveDismiss(withPanGestureRecognizer: gesture)
-            print("interactiveDismiss count: \(nav.viewControllers.count)")
+            if nav.isPopGestureActive {
+                nav.interactivePop(withPanGestureRecognizer: gesture)
+            }
+            else {
+                nav.interactiveDismiss(withPanGestureRecognizer: gesture)
+            }
         }
+        
     }
     
     @objc fileprivate func onTopTapGesture(gesture: UITapGestureRecognizer) {
@@ -277,9 +277,9 @@ extension PostcardContainerViewController {
             // disimiss view
             let dismissTransitionView = pvc.dismissInteractiveTransitionViewAtPostcard?(nav: nav)
             if let transitionView = dismissTransitionView {
-//                transitionView.isUserInteractionEnabled = true
-//                let interactivePan = UIPanGestureRecognizer(target: self, action: #selector(onInteractivePanGesture(gesture:)))
-//                transitionView.addGestureRecognizer(interactivePan)
+                transitionView.isUserInteractionEnabled = true
+                let interactivePan = UIPanGestureRecognizer(target: self, action: #selector(onInteractivePanGesture(gesture:)))
+                transitionView.addGestureRecognizer(interactivePan)
             }
         }
     }
